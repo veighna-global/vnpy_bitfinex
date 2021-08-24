@@ -288,19 +288,17 @@ class BitfinexRestApi(RestClient):
 
                 buf: List[BarData] = []
 
-                for l in data:
-                    ts, o, c, h, l, v = l
-
+                for row in data:
                     bar: BarData = BarData(
                         symbol=req.symbol,
                         exchange=req.exchange,
-                        datetime=generate_datetime(ts),
+                        datetime=generate_datetime(row[0]),
                         interval=req.interval,
-                        volume=v,
-                        open_price=o,
-                        high_price=h,
-                        low_price=l,
-                        close_price=c,
+                        volume=row[5],
+                        open_price=row[1],
+                        high_price=row[3],
+                        low_price=row[4],
+                        close_price=row[2],
                         gateway_name=self.gateway_name
                     )
                     buf.append(bar)
