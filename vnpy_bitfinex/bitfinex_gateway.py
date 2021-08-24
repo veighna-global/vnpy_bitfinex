@@ -102,8 +102,8 @@ class BitfinexGateway(BaseGateway):
         "key": "",
         "secret": "",
         "session": 3,
-        "proxy_host": "127.0.0.1",
-        "proxy_port": 1080,
+        "代理地址": "",
+        "代理端口": 0,
         "margin": ["False", "True"]
     }
 
@@ -124,8 +124,8 @@ class BitfinexGateway(BaseGateway):
         key = setting["key"]
         secret = setting["secret"]
         session = setting["session"]
-        proxy_host = setting["proxy_host"]
-        proxy_port = setting["proxy_port"]
+        proxy_host = setting["代理地址"]
+        proxy_port = setting["代理端口"]
 
         if setting["margin"] == "True":
             margin = True
