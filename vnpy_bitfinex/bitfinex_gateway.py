@@ -101,7 +101,6 @@ class BitfinexGateway(BaseGateway):
     default_setting: Dict[str, Any] = {
         "key": "",
         "secret": "",
-        "session": 3,
         "代理地址": "",
         "代理端口": 0,
         "margin": ["False", "True"]
@@ -123,7 +122,6 @@ class BitfinexGateway(BaseGateway):
         """"""
         key = setting["key"]
         secret = setting["secret"]
-        session = setting["session"]
         proxy_host = setting["代理地址"]
         proxy_port = setting["代理端口"]
 
@@ -132,7 +130,7 @@ class BitfinexGateway(BaseGateway):
         else:
             margin = False
 
-        self.rest_api.connect(key, secret, session, proxy_host, proxy_port)
+        self.rest_api.connect(key, secret, proxy_host, proxy_port)
         self.ws_api.connect(key, secret, proxy_host, proxy_port, margin)
 
         self.event_engine.register(EVENT_TIMER, self.process_timer_event)
@@ -234,7 +232,6 @@ class BitfinexRestApi(RestClient):
         self,
         key: str,
         secret: str,
-        session: int,
         proxy_host: str,
         proxy_port: int
     ):
@@ -249,7 +246,7 @@ class BitfinexRestApi(RestClient):
         )
 
         self.init(REST_HOST, proxy_host, proxy_port)
-        self.start(session)
+        self.start()
 
         self.gateway.write_log("REST API启动成功")
         self.query_contract()
