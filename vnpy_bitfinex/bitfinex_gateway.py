@@ -38,8 +38,6 @@ from vnpy.trader.object import (
 # UTC时区
 UTC_TZ = pytz.utc
 
-# BASE_URL = "https://api.bitfinex.com/"
-
 # 实盘REST API地址
 REST_HOST: str = "https://api.bitfinex.com/"
 
