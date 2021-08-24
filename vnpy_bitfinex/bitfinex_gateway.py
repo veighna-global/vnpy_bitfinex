@@ -5,15 +5,15 @@ import time
 from copy import copy
 from datetime import datetime, timedelta
 from urllib.parse import urlencode
-from typing import Dict, Any
+from typing import Dict, Any, List
 import pytz
 
 #from vnpy.api.rest import Request, RestClient
 #from vnpy.api.websocket import WebsocketClient
-from vnpy_rest import Request, RestClient
+from vnpy_rest import Request, RestClient, Response
 from vnpy_websocket import WebsocketClient
-from vnpy.event import Event
 from vnpy.trader.event import EVENT_TIMER
+from vnpy.event import Event, EventEngine
 
 from vnpy.trader.constant import (
     Direction,
@@ -106,24 +106,24 @@ class BitfinexGateway(BaseGateway):
         "margin": ["False", "True"]
     }
 
-    exchanges = [Exchange.BITFINEX]
+    exchanges: Exchange = [Exchange.BITFINEX]
 
-    def __init__(self, event_engine):
-        """Constructor"""
-        super(BitfinexGateway, self).__init__(event_engine, "BITFINEX")
+    def __init__(self, event_engine: EventEngine, gateway_name: str = "BITFINEX") -> None:
+        """构造函数"""
+        super().__init__(event_engine, gateway_name)
 
-        self.timer_count = 0
-        self.resubscribe_interval = 60
+        self.timer_count: int = 0
+        self.resubscribe_interval: int = 60
 
-        self.rest_api = BitfinexRestApi(self)
-        self.ws_api = BitfinexWebsocketApi(self)
+        self.rest_api: "BitfinexRestApi" = BitfinexRestApi(self)
+        self.ws_api: "BitfinexWebsocketApi" = BitfinexWebsocketApi(self)
 
     def connect(self, setting: dict):
-        """"""
-        key = setting["key"]
-        secret = setting["secret"]
-        proxy_host = setting["代理地址"]
-        proxy_port = setting["代理端口"]
+        """连接交易接口"""
+        key: str = setting["key"]
+        secret: str = setting["secret"]
+        proxy_host: str = setting["代理地址"]
+        proxy_port: int = setting["代理端口"]
 
         if setting["margin"] == "True":
             margin = True
@@ -135,90 +135,85 @@ class BitfinexGateway(BaseGateway):
 
         self.event_engine.register(EVENT_TIMER, self.process_timer_event)
 
-    def subscribe(self, req: SubscribeRequest):
-        """"""
+    def subscribe(self, req: SubscribeRequest) -> None:
+        """订阅行情"""
         self.ws_api.subscribe(req)
 
-    def send_order(self, req: OrderRequest):
-        """"""
+    def send_order(self, req: OrderRequest) -> str:
+        """委托下单"""
         return self.ws_api.send_order(req)
 
-    def cancel_order(self, req: CancelRequest):
-        """"""
+    def cancel_order(self, req: CancelRequest) -> None:
+        """委托撤单"""
         self.ws_api.cancel_order(req)
 
-    def query_account(self):
-        """"""
+    def query_account(self) -> None:
+        """查询资金"""
         pass
 
-    def query_position(self):
-        """"""
+    def query_position(self) -> None:
+        """查询持仓"""
         pass
 
-    def query_history(self, req: HistoryRequest):
-        """"""
+    def query_history(self, req: HistoryRequest) -> List[BarData]:
+        """查询历史数据"""
         return self.rest_api.query_history(req)
 
-    def close(self):
-        """"""
+    def close(self) -> None:
+        """关闭连接"""
         self.rest_api.stop()
         self.ws_api.stop()
 
-    def process_timer_event(self, event: Event):
-        """"""
+    def process_timer_event(self, event: Event) -> None:
+        """定时事件处理"""
         self.timer_count += 1
 
         if self.timer_count < self.resubscribe_interval:
             return
 
-        self.timer_count = 0
+        self.timer_count: int = 0
         self.ws_api.resubscribe()
 
 
 class BitfinexRestApi(RestClient):
-    """
-    BitfineX REST API
-    """
+    """Bitfinex的REST接口"""
 
-    def __init__(self, gateway: BaseGateway):
-        """"""
-        super(BitfinexRestApi, self).__init__()
+    def __init__(self, gateway: BitfinexGateway) -> None:
+        """构造函数"""
+        super().__init__()
 
-        self.gateway = gateway
-        self.gateway_name = gateway.gateway_name
+        self.gateway: BitfinexGateway = gateway
+        self.gateway_name: str = gateway.gateway_name
 
-        self.key = ""
-        self.secret = ""
+        self.key: str = ""
+        self.secret: str = ""
 
-        self.order_count = 1_000_000
-        self.connect_time = 0
+        self.order_count: int = 1000000
+        self.connect_time: int = 0
 
-    def sign(self, request):
-        """
-        Generate BitfineX signature.
-        """
-        # Sign
-        nonce = str(int(round(time.time() * 1000000)))
+    def sign(self, request: Request) -> Request:
+        """生成Bitfinex签名"""
+        nonce: str = str(int(round(time.time() * 1000000)))
 
         if request.params:
-            query = urlencode(request.params)
-            path = request.path + "?" + query
+            query: str = urlencode(request.params)
+            path: str = request.path + "?" + query
         else:
-            path = request.path
+            path: str = request.path
 
         if request.data:
             request.data = urlencode(request.data)
         else:
             request.data = ""
 
-        msg = request.method + \
+        msg: str = request.method + \
             "/api/v2/{}{}{}".format(path, nonce, request.data)
-        signature = hmac.new(
+        signature: str = hmac.new(
             self.secret, msg.encode("utf8"), digestmod=hashlib.sha384
         ).hexdigest()
 
-        # Add headers
-        headers = {
+        # 添加请求头
+        headers: dict = {
             "bfx-nonce": nonce,
             "bfx-apikey": self.key,
             "bfx-signature": signature,
@@ -234,10 +229,8 @@ class BitfinexRestApi(RestClient):
         secret: str,
         proxy_host: str,
         proxy_port: int
-    ):
-        """
-        Initialize connection to REST server.
-        """
+    ) -> None:
+        """连接REST服务器"""
         self.key = key
         self.secret = secret.encode()
 
@@ -251,13 +244,82 @@ class BitfinexRestApi(RestClient):
         self.gateway.write_log("REST API启动成功")
         self.query_contract()
 
-    def query_contract(self):
-        """"""
+    def query_contract(self) -> None:
+        """查询合约信息"""
         self.add_request(
             method="GET",
             path="/v1/symbols_details",
             callback=self.on_query_contract,
         )
+
+    def query_history(self, req: HistoryRequest) -> List[BarData]:
+        """查询历史数据"""
+        history: List[BarData] = []
+        limit: int = 5000
+
+        interval: str = INTERVAL_VT2BITFINEX[req.interval]
+        path: str = f"/v2/candles/trade:{interval}:t{req.symbol}/hist"
+
+        start_time: datetime = req.start
+
+        while True:
+            # 创建查询参数
+            params: dict = {
+                "limit": 5000,
+                "start": datetime.timestamp(start_time) * 1000,
+                "sort": 1
+            }
+
+            resp: Response = self.request(
+                "GET",
+                path,
+                params=params
+            )
+
+            if resp.status_code // 100 != 2:
+                msg: str = f"获取历史数据失败，状态码：{resp.status_code}，信息：{resp.text}"
+                self.gateway.write_log(msg)
+                break
+            else:
+                data: dict = resp.json()
+                if not data:
+                    msg: str = f"获取历史数据为空，开始时间：{start_time}"
+                    break
+
+                buf: List[BarData] = []
+
+                for l in data:
+                    ts, o, c, h, l, v = l
+
+                    bar: BarData = BarData(
+                        symbol=req.symbol,
+                        exchange=req.exchange,
+                        datetime=generate_datetime(ts),
+                        interval=req.interval,
+                        volume=v,
+                        open_price=o,
+                        high_price=h,
+                        low_price=l,
+                        close_price=c,
+                        gateway_name=self.gateway_name
+                    )
+                    buf.append(bar)
+
+                history.extend(buf)
+
+                begin = buf[0].datetime
+                end = buf[-1].datetime
+                msg = f"获取历史数据成功，{req.symbol} - {req.interval.value}，{begin} - {end}"
+                self.gateway.write_log(msg)
+
+                # Break if total data count less than 5000 (latest date collected)
+                if len(data) < limit:
+                    break
+
+                # Update start time
+                start_time = bar.datetime + TIMEDELTA_MAP[req.interval]
+
+        return history
 
     def on_query_contract(self, data, request):
         """"""
@@ -296,77 +358,6 @@ class BitfinexRestApi(RestClient):
         sys.stderr.write(
             self.exception_detail(exception_type, exception_value, tb, request)
         )
-
-    def query_history(self, req: HistoryRequest):
-        """"""
-        history = []
-        limit = 5000
-
-        interval = INTERVAL_VT2BITFINEX[req.interval]
-        path = f"/v2/candles/trade:{interval}:t{req.symbol}/hist"
-
-        start_time = req.start
-
-        while True:
-            # Create query params
-            params = {
-                "limit": 5000,
-                "start": datetime.timestamp(start_time) * 1000,
-                "sort": 1
-            }
-
-            # Get response from server
-            resp = self.request(
-                "GET",
-                path,
-                params=params
-            )
-
-            # Break if request failed with other status code
-            if resp.status_code // 100 != 2:
-                msg = f"获取历史数据失败，状态码：{resp.status_code}，信息：{resp.text}"
-                self.gateway.write_log(msg)
-                break
-            else:
-                data = resp.json()
-                if not data:
-                    msg = f"获取历史数据为空，开始时间：{start_time}"
-                    break
-
-                buf = []
-
-                for l in data:
-                    ts, o, c, h, l, v = l
-
-                    bar = BarData(
-                        symbol=req.symbol,
-                        exchange=req.exchange,
-                        datetime=generate_datetime(ts),
-                        interval=req.interval,
-                        volume=v,
-                        open_price=o,
-                        high_price=h,
-                        low_price=l,
-                        close_price=c,
-                        gateway_name=self.gateway_name
-                    )
-                    buf.append(bar)
-
-                history.extend(buf)
-
-                begin = buf[0].datetime
-                end = buf[-1].datetime
-                msg = f"获取历史数据成功，{req.symbol} - {req.interval.value}，{begin} - {end}"
-                self.gateway.write_log(msg)
-
-                # Break if total data count less than 5000 (latest date collected)
-                if len(data) < limit:
-                    break
-
-                # Update start time
-                start_time = bar.datetime + TIMEDELTA_MAP[req.interval]
-
-        return history
 
 
 class BitfinexWebsocketApi(WebsocketClient):
