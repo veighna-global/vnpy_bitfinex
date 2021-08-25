@@ -57,7 +57,7 @@ ORDERTYPE_VT2BITFINEX: Dict[OrderType, str] = {
     OrderType.LIMIT: "EXCHANGE LIMIT",
     OrderType.MARKET: "EXCHANGE MARKET",
 }
-ORDERTYPE_BITFINEX2VT = {
+ORDERTYPE_BITFINEX2VT: Dict[str, OrderType] = {
     "EXCHANGE LIMIT": OrderType.LIMIT,
     "EXCHANGE MARKET": OrderType.MARKET,
     "LIMIT": OrderType.LIMIT,
@@ -69,7 +69,7 @@ DIRECTION_VT2BITFINEX: Dict[Direction, str] = {
     Direction.LONG: "Buy",
     Direction.SHORT: "Sell",
 }
-DIRECTION_BITFINEX2VT = {
+DIRECTION_BITFINEX2VT: Dict[str, Direction] = {
     "Buy": Direction.LONG,
     "Sell": Direction.SHORT,
 }
