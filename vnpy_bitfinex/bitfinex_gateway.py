@@ -345,9 +345,7 @@ class BitfinexRestApi(RestClient):
         msg: str = f"触发异常，状态码：{exception_type}，信息：{exception_value}"
         self.gateway.write_log(msg)
 
-        sys.stderr.write(
-            self.exception_detail(exception_type, exception_value, tb, request)
-        )
+        super().on_error(exception_type, exception_value, tb, request)
 
 
 class BitfinexWebsocketApi(WebsocketClient):
@@ -647,9 +645,7 @@ class BitfinexWebsocketApi(WebsocketClient):
         msg: str = f"触发异常，状态码：{exception_type}，信息：{exception_value}"
         self.gateway.write_log(msg)
 
-        sys.stderr.write(
-            self.exception_detail(exception_type, exception_value, tb)
-        )
+        super().on_error(exception_type, exception_value, tb)
 
     def authenticate(self) -> None:
         """用户授权验证"""
