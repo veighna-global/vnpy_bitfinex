@@ -618,7 +618,7 @@ class BitfinexWebsocketApi(WebsocketClient):
             gateway_name=self.gateway_name
         )
 
-        self.gateway.on_account(copy(account))
+        self.gateway.on_account(account)
 
     def on_trade_update(self, data: dict) -> None:
         """成交信息推送"""
