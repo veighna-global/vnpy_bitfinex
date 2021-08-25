@@ -365,13 +365,11 @@ class BitfinexWebsocketApi(WebsocketClient):
         self.secret: str = ""
 
         self.ticks: Dict[str, TickData] = {}
-        self.accounts: Dict[str, AccountData] = {}
+        self.subscribed: Dict[str, SubscribeRequest] = {}
 
         self.bids: Dict[str, Dict[float, float]] = {}
         self.asks: Dict[str, Dict[float, float]] = {}
         self.channels: Dict[str, Tuple[str, str]] = {}
-
-        self.subscribed: Dict[str, SubscribeRequest] = {}
 
     def connect(
         self,
@@ -388,7 +386,7 @@ class BitfinexWebsocketApi(WebsocketClient):
         self.init(WEBSOCKET_HOST, proxy_host, proxy_port)
         self.start()
 
-    def subscribe(self, req: SubscribeRequest) -> int:
+    def subscribe(self, req: SubscribeRequest) -> None:
         """订阅行情"""
         if req.symbol not in self.subscribed:
             # 缓存订阅记录
@@ -408,9 +406,7 @@ class BitfinexWebsocketApi(WebsocketClient):
         }
         self.send_packet(d)
 
-        return int(round(time.time() * 1000))
-
-    def resubscribe(self) -> int:
+    def resubscribe(self) -> None:
         """重新订阅"""
         for req in self.subscribed.values():
             self.subscribe(req)
@@ -614,17 +610,14 @@ class BitfinexWebsocketApi(WebsocketClient):
         elif self.margin and str(data[0]) != "margin":
             return
 
-        accountid: str = str(data[1])
-        account: AccountData = self.accounts.get(accountid, None)
-        if not account:
-            account: AccountData = AccountData(
-                accountid=accountid,
-                gateway_name=self.gateway_name,
-            )
+        account: AccountData = AccountData(
+            accountid=str(data[1]),
+            balance=float(data[2]),
+            available=0.0,
+            frozen=0.0,
+            gateway_name=self.gateway_name
+        )
 
-        account.balance = float(data[2])
-        account.available = 0.0
-        account.frozen = 0.0
         self.gateway.on_account(copy(account))
 
     def on_trade_update(self, data: dict) -> None:
