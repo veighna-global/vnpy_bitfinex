@@ -1,6 +1,5 @@
 import hashlib
 import hmac
-import sys
 import time
 from copy import copy
 from datetime import datetime, timedelta
@@ -596,6 +595,7 @@ class BitfinexWebsocketApi(WebsocketClient):
 
         dt: datetime = datetime.now(UTC_TZ)
         tick.datetime = dt
+        tick.localtime = datetime.now()
 
         self.gateway.on_tick(copy(tick))
 
