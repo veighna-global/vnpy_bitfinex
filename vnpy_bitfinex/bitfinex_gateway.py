@@ -57,7 +57,7 @@ ORDERTYPE_VT2BITFINEX: Dict[OrderType, str] = {
     OrderType.LIMIT: "EXCHANGE LIMIT",
     OrderType.MARKET: "EXCHANGE MARKET",
 }
-ORDERTYPE_BITFINEX2VT = {
+ORDERTYPE_BITFINEX2VT: Dict[str, OrderType] = {
     "EXCHANGE LIMIT": OrderType.LIMIT,
     "EXCHANGE MARKET": OrderType.MARKET,
     "LIMIT": OrderType.LIMIT,
@@ -69,7 +69,7 @@ DIRECTION_VT2BITFINEX: Dict[Direction, str] = {
     Direction.LONG: "Buy",
     Direction.SHORT: "Sell",
 }
-DIRECTION_BITFINEX2VT = {
+DIRECTION_BITFINEX2VT: Dict[str, Direction] = {
     "Buy": Direction.LONG,
     "Sell": Direction.SHORT,
 }
@@ -345,9 +345,7 @@ class BitfinexRestApi(RestClient):
         msg: str = f"触发异常，状态码：{exception_type}，信息：{exception_value}"
         self.gateway.write_log(msg)
 
-        sys.stderr.write(
-            self.exception_detail(exception_type, exception_value, tb, request)
-        )
+        super().on_error(exception_type, exception_value, tb, request)
 
 
 class BitfinexWebsocketApi(WebsocketClient):
@@ -618,7 +616,7 @@ class BitfinexWebsocketApi(WebsocketClient):
             gateway_name=self.gateway_name
         )
 
-        self.gateway.on_account(copy(account))
+        self.gateway.on_account(account)
 
     def on_trade_update(self, data: dict) -> None:
         """成交信息推送"""
@@ -647,9 +645,7 @@ class BitfinexWebsocketApi(WebsocketClient):
         msg: str = f"触发异常，状态码：{exception_type}，信息：{exception_value}"
         self.gateway.write_log(msg)
 
-        sys.stderr.write(
-            self.exception_detail(exception_type, exception_value, tb)
-        )
+        super().on_error(exception_type, exception_value, tb)
 
     def authenticate(self) -> None:
         """用户授权验证"""
