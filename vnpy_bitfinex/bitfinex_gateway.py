@@ -34,6 +34,7 @@ from vnpy.trader.object import (
     HistoryRequest
 )
 
+
 # UTC时区
 UTC_TZ = pytz.utc
 
@@ -624,14 +625,14 @@ class BitfinexWebsocketApi(WebsocketClient):
         info: dict = data[2]
 
         if name == "ws":
-            for l in info:
-                self.on_wallet(l)
+            for buf in info:
+                self.on_wallet(buf)
             self.gateway.write_log("账户资金获取成功")
         elif name == "wu":
             self.on_wallet(info)
         elif name == "os":
-            for l in info:
-                self.on_order(l)
+            for buf in info:
+                self.on_order(buf)
             self.gateway.write_log("活动委托获取成功")
         elif name in ["on", "ou", "oc"]:
             self.on_order(info)
